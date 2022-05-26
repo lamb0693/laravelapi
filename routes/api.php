@@ -20,7 +20,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::get('/books', [BookController::class, 'index']);
-Route::get('/books/{book}', [BookController::class, 'show']);
+Route::middleware('auth:sanctum')->get('/books', [BookController::class, 'index']);
+Route::middleware('auth:sanctum')->get('/books/{book}', [BookController::class, 'show']);
+Route::middleware('auth:sanctum')->get('logout', [LoginController::class, 'logout']);
 
 Route::post('register', [LoginController::class, 'register']);
+Route::post('login', [LoginController::class, 'login']);

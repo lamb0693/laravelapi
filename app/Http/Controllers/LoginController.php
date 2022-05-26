@@ -9,6 +9,7 @@ use Illuminate\Validation\Rules;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Laravel\Sanctum\PersonalAccessToken;
 
 
 class LoginController extends Controller
@@ -52,6 +53,71 @@ class LoginController extends Controller
             ]);
         }
 
+    }
+
+    public function login(Request $request){
+
+        // email과 password를 validation 실패시 error message 포함한 response 보냄
+
+        try{
+            $request->validate([
+                'email' => ['required', 'string', 'email', 'max:255',],
+                'password' => ['required', Rules\Password::defaults()],
+            ]);
+        }
+        catch(ValidationException $exc){
+            return response()->json([
+                'login_result' => 'validation error',
+                'message' => $exc->getMessage()
+            ]);
+        }
+
+        $user = User::where('email', '=', $request->email)->first();
+
+        // email 이 없거나 password가 틀리면 message 함깨 response
+        if($user){
+            if (!Hash::check($request->password, $user->password)) {
+                return response()->json([
+                    'login_result' =>'login failed',
+                    'message' => 'confirm your password'
+                ]);
+            }
+        }
+        else{
+            return response()->json([
+                'login_result' =>'login failed',
+                'message' => 'confirm your email'
+            ]);
+        }
+
+        // token 생성
+        $access_token = $user->createToken('api-token')->plainTextToken;
+
+        // token 생성 실패시
+        if(!$access_token){
+            return response()->json([
+                'login_result' =>'login failed',
+                'message' => 'token not created. contact admin'
+            ]);
+        }
+
+        // 생성한 token과 함깨 response
+        return response()->json([
+            'login_result' =>'success',
+            'access_token' => $access_token,
+            'type' => 'bearer',
+            'message' => $user->email.'님 로그인 되었습니다'
+        ], 200);
+    }
+
+    public function logout(Request $request){
+        $user = Auth::user();
+        $user->tokens()->delete();
+
+        return response()->json([
+            'logout_result' => 'success',
+            'message' => $user->email.' 님 logout 되었어요'
+        ], 200);
     }
 
 }
